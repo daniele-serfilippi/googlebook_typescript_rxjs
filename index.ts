@@ -35,6 +35,12 @@ interface BookItem {
     id: string
 }
 
+function showTotal(total: number) {
+    const found = document.querySelector('#found');
+    if (found) {
+        found.textContent = total.toString();
+    }
+}
 
 function getBooks(booktitle: string) {
     const { from } = rxjs;
@@ -45,8 +51,9 @@ function getBooks(booktitle: string) {
     .then(res => res.json())
     //.then(books => console.log(books))
 
-    from(p)
+    return from(p)
     .pipe(
+        tap((data: GoogleBook) => showTotal(data.items.length)),
         switchMap((data: GoogleBook) => from(data.items || [])),
         map((ele: BookItem) => {
             const book: Book = {
@@ -60,7 +67,7 @@ function getBooks(booktitle: string) {
         }),
         //tap((book: Book) => console.log(book)),
     )
-    .subscribe((book: Book) => displayBook(book))
+    
 }
 
 function displayBook(book: Book) {
@@ -69,11 +76,6 @@ function displayBook(book: Book) {
                         <div class="card-body">
                             <h5 class="card-text">${book.title}</h5>
                             <div class="d-flex justify-content-between align-items-center">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
-                            </div>
-                            <small class="text-muted">9 mins</small>
                             </div>
                         </div>
                         </div>`;
@@ -87,4 +89,50 @@ function displayBook(book: Book) {
     }
 }
 
-getBooks('rxjs');
+function cleanBooks() {
+    const books = document.querySelector('#books');
+    if (books) {
+        books.innerHTML= '';
+    }
+}
+
+function searchBooks() {
+    const searchEle = document.querySelector('#search');
+    const { fromEvent } = rxjs;
+    const { filter, map, switchMap, debounceTime, tap } = rxjs.operators;
+    if (searchEle) {
+        fromEvent(searchEle, 'keyup')
+            .pipe(
+                map((ele: any) => ele.target.value),
+                filter((ele: string) => ele.length > 2),
+                debounceTime(1200),
+                tap(() => cleanBooks()),
+                switchMap((ele: string) => getBooks(ele))
+            )
+            .subscribe((book: Book) => displayBook(book))
+
+        
+    }
+    
+}
+
+function searchByButton() {
+
+    const search: any = document.querySelector('#search');
+
+    if (search) {
+        getBooks(search.value)
+        .subscribe((book: Book) => displayBook(book))
+    }
+}
+
+function cleanBooksByButton() {
+    document.getElementById('search').value = '';
+    document.getElementById('found').textContent = '0';
+    cleanBooks();
+
+}
+
+searchBooks();
+
+//getBooks('rxjs');
